@@ -1,0 +1,58 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: fluentd
+  namespace: events
+  labels:
+    app: fluentd
+spec:
+  type: ClusterIP
+  selector:
+    app: fluentd
+  ports:
+  - port: 24224
+    name: fluentd
+    targetPort: 24224
+  - port: 24231
+    name: metrics
+    targetPort: 24231
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fluentd
+  namespace: events
+spec:
+  selector:
+    matchLabels:
+      app: fluentd
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: fluentd
+    spec:
+      volumes:
+      - name: fluentd-config
+        configMap:
+          name: fluentd-config
+      containers:
+      - name: fluentd
+        image: mattiashem/fluentd
+        command: ["fluentd"]
+        args: ["-c", "/fluentd/etc/fluent.conf", "-v"]
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 24224
+          name: fluentd
+        - containerPort: 24231
+          name: metrics
+        env:
+        - name: ELASTICSEARCH_URL
+          value: "elasticsearch.elastic.svc"
+        - name: NATS_HOST
+          value: "nats.nats.svc"
+        volumeMounts:
+        - name: fluentd-config
+          mountPath: /fluentd/etc
+          readOnly: true

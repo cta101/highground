@@ -1,0 +1,76 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluentd-config
+  namespace: events
+data:
+  fluent.conf: |
+      # Forwarded from fluentd
+      <source>
+        @type nats
+        tag nats
+        host  "#{ENV['NATS_HOST']}"
+        port 4222
+        queues *.>
+        ssl false
+
+
+      </source>
+
+     
+        <filter nats.**>
+          @type parser
+          key_name log
+          <parse>
+            @type multi_format
+            <pattern>
+              format regexp
+              expression /^(?<remove1>[\[\[ ]*)(?<id>[0-9]*[.][0-9]*)(?<remove2>[,])(?<message>.*)(?<remove3>..)$/
+              types id:float,message:string
+             </pattern>
+             <pattern>
+              format json
+            </pattern>
+          </parse>   
+        @log_level error
+        </filter>
+
+       
+
+
+
+      # Send logs to elasticsearch
+       <match nats.**>
+            @type elasticsearch_dynamic
+            host "#{ENV['ELASTICSEARCH_URL']}"
+            port 9200
+            logstash_format true
+            logstash_prefix kube
+            # To make fluentd reload elastic ips if they fail to connect
+            reload_on_failure true
+            # Set type name dynamically
+            type_name doc
+            include_tag_key true
+            #type_name ${record['kubernetes']['namespace_name']}-${record['kubernetes']['container_name']}
+            @log_level error
+            </match>
+      
+
+        <match stout.**>
+                @type stdout
+        </match>
+
+      # expose metrics in prometheus format
+      <source>
+        @type prometheus
+        bind 0.0.0.0
+        port 24231
+        metrics_path /metrics
+      </source>
+      <source>
+        @type prometheus_output_monitor
+        interval 10
+        <labels>
+          fluentd shipper
+        </labels>
+      </source>

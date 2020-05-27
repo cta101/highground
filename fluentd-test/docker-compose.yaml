@@ -1,0 +1,6 @@
+version: '3.4'
+services: 
+  fluentd:
+    image: mattiashem/fluentd
+    volumes:
+      - ./config:/opt/config

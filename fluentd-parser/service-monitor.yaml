@@ -1,0 +1,15 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: fluentd-metrics
+  namespace: logging
+  labels:
+    release: prometheus-operator
+spec:
+  endpoints:
+  - path: "/metrics"
+    scheme: "http"
+    targetPort: 24231
+  selector:
+    matchLabels:
+      app: fluentd
