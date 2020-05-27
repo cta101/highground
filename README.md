@@ -27,5 +27,5 @@ fluentd is deploys as a deployemnst and can be scaled up
 As deafult now a elastic and kibana is used to store and visulize the events.
 
 
-
+q
 
