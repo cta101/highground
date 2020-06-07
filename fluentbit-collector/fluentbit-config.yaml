@@ -10,7 +10,7 @@ data:
     [SERVICE]
         Parsers_File /fluent-bit/parsers/parsers.conf
         Daemon       Off
-        Log_Level    info
+        Log_Level    debug
 
 
 
@@ -18,7 +18,7 @@ data:
         Name              tail
         Tag               kube.*
         Path              /var/log/containers/*.log
-        DB                /var/lib/fluent-bit/flb_kube.db
+        DB                /tmp/flb_kube.db
         Parser            docker
         Docker_Mode       On
         Mem_Buf_Limit     50MB
@@ -35,8 +35,7 @@ data:
         K8S-Logging.Exclude On
 
     [OUTPUT]
-        Name nats
-        Match  *
-        Host   nats.nats.svc.cluster.local
-        Port   4222
-    
+        Name          forward
+        Match         *
+        Host          fluentd-forward
+        Port          24224

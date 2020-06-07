@@ -1,17 +1,17 @@
 kind: Service
 apiVersion: v1
 metadata:
-  name: fluentd
+  name: fluentd-forward
   namespace: events
   labels:
-    app: fluentd
+    app: fluentd-forward
 spec:
   type: ClusterIP
   selector:
-    app: fluentd
+    app: fluentd-forward
   ports:
   - port: 24224
-    name: fluentd
+    name: fluentd-forward
     targetPort: 24224
   - port: 24231
     name: metrics
@@ -20,43 +20,65 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: fluentd
+  name: fluentd-forward
   namespace: events
 spec:
   selector:
     matchLabels:
-      app: fluentd
+      app: fluentd-forward
   replicas: 1
   template:
     metadata:
       labels:
-        app: fluentd
+        app: fluentd-forward
     spec:
       volumes:
-      - name: fluentd-config
+      - name: fluentd-forward-config
         configMap:
-          name: fluentd-config
+          name: fluentd-forward-config
       containers:
-      - name: fluentd
+      - name: fluentd-forward
         image: ctael5co/fluentd
         command: ["fluentd"]
         args: ["-c", "/fluentd/etc/fluent.conf", "-v"]
         imagePullPolicy: Always
         ports:
         - containerPort: 24224
-          name: fluentd
+          name: fluentd-forward
         - containerPort: 24231
           name: metrics
         env:
         - name: ELASTICSEARCH_URL
           value: "elasticsearch.elastic.svc"
-        - name: FLUENT_ELASTICSEARCH_HOST
-          value: "elasticsearch.elastic.svc"
-        - name: FLUENT_ELASTICSEARCH_PORT
-          value: "9200"
         - name: NATS_HOST
           value: "nats.nats.svc"
         volumeMounts:
-        - name: fluentd-config
+        - name: fluentd-forward-config
           mountPath: /fluentd/etc
           readOnly: true
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluentd-forward-config 
+  namespace: events
+data:
+  fluent.conf: |
+        <source>
+          type forward
+          port 24224
+          bind 0.0.0.0
+        </source>
+
+        <match **>
+           @type nats
+           tag nats
+           host nats.nats.svc
+           port 4222
+           ssl false
+        </match>
+
+        <match **>
+           @type stdout
+        </match>
+
